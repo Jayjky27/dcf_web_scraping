@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QApplication
+import mygui
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
@@ -95,7 +96,7 @@ for val in pvffcf_values:
     sumOfFCF += val
 
 terminalValuePVFFCF = pvffcf_values[9]
-pvffcf_values.pop()
+
 # Cash and Cash equivalents, Total Debt - získá se z web stránky (Zatím pouze manuálně)
 cashAndEquivalents = 75531 
 totalDebt = 67127
@@ -109,15 +110,44 @@ sharesOutstanding = 7430
 # DCF price per share
 dcfPricePerShare = round(equityValue / sharesOutstanding, 2)
 
+# Current prize + Difference from DCF prize per share
+table = soup.find('div', class_='container yf-aay0dk') 
+div_elements = table.find('span')
+div_elements = div_elements.text.strip()
+div_elements.replace('.','')
+currentPrice = float(div_elements)
+
+difference = round(((dcfPricePerShare - currentPrice)/currentPrice) * 100, 2)
+
+# *******************************************************************
+# Příprava dat do tabluky
+# *******************************************************************
+tab1 = [] # Free Cashflows + growth rate tabulka
+tab1.append(freeCashFlow_values)
+tab1.append(growth_values)
+
+futureFreeCashflow_values.append(terminalValue)
+tab3 = [] # Future Cashflows + PV of FFCF
+tab3.append(futureFreeCashflow_values)
+tab3.append(pvffcf_values)
+
+tab5 = []
+tab5.append(sumOfFCF)
+tab5.append(cashAndEquivalents)
+tab5.append(totalDebt)
+tab5.append(equityValue)
+tab5.append(sharesOutstanding)
+tab5.append(dcfPricePerShare)
+
 
 # Výpisy do konzole
 print('FreeCashflow: '+ str(freeCashFlow_values))
 print('Growth rate: '+ str(growth_values))
 print('Average Growth Rate: ' + str(averageGrowthRate_value))
 print('Future Free Cashflow: ' + str(futureFreeCashflow_values))
+print('PV of FFCF values: ' + str(pvffcf_values))
 print('Terminal value: ' + str(terminalValue))
 print('Terminal PVFFCF value: ' + str(terminalValuePVFFCF))
-print('PV of FFCF values: ' + str(pvffcf_values))
 print('Sum of FCF: ' + str(sumOfFCF))
 print('Equity value: ' + str(equityValue))
 print('DCF price per share: ' + str(dcfPricePerShare))
@@ -139,10 +169,16 @@ print(values)
 #***************************************************************
 # APP
 #***************************************************************
-'''
 def main():
     app = QApplication([])
+    window = mygui.MyGUI()
+    window.loadDataToTable1(tab1)
+    window.loadDataToTable2(growthRate, averageGrowthRate_value)
+    window.loadDataToTable3(tab3)
+    window.loadDataToTable4(perpetualGrowthRate, discountRate)
+    window.loadDataToTable5(tab5)
+    window.loadDataToTable6(currentPrice, difference)
+    app.exec_()
 
 if __name__ == '__main__':
     main()
-'''
