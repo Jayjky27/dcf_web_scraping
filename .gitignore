@@ -21,5 +21,8 @@ __pycache__/
 .vscode/
 *.env
 
+# Ignorovat spustitelné soubory
+*.exe
+
 # Povolit Python soubory
 !*.py
