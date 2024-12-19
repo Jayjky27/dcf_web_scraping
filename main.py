@@ -1,3 +1,16 @@
+from dataScraper import DataScraper
+#***************************************************************
+# APP
+#***************************************************************
+def main():
+    scraper = DataScraper('MSFT')
+    scraper.fetchData()
+    scraper.parseData()
+
+if __name__ == '__main__':
+    main()
+
+'''
 from PyQt5.QtWidgets import QApplication
 import mygui
 import requests
@@ -152,20 +165,6 @@ print('Sum of FCF: ' + str(sumOfFCF))
 print('Equity value: ' + str(equityValue))
 print('DCF price per share: ' + str(dcfPricePerShare))
 
-'''
-element = table.find_next('div', class_='column yf-t22klz alt')
-while True:
-    element = table.find_next('div', class_='column yf-t22klz alt')
-    if element is None:
-        break
-    values.append(element.text.strip())
-
-span = row.find_all("div", class_='column yf-t22klz alt')[2].text
-
-print('SPAN: ' + str(span))
-print(values)
-'''
-
 #***************************************************************
 # APP
 #***************************************************************
@@ -182,3 +181,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+'''

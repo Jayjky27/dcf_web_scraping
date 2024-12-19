@@ -1,0 +1,25 @@
+# Ignorovat virtuální prostředí
+vemv/
+
+# Ignorovat pycache a dočasné soubory
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignorovat dočasné nebo záložní soubory editorů
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+
+# Ignorovat konfigurační a systémové soubory
+.DS_Store
+*.~undo-tree
+*.idea/
+.vscode/
+*.env
+
+# Povolit Python soubory
+!*.py
