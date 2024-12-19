@@ -5,7 +5,6 @@ from dataScraper import DataScraper
 def main():
     scraper = DataScraper('MSFT')
     scraper.fetchData()
-    scraper.parseData()
 
 if __name__ == '__main__':
     main()
