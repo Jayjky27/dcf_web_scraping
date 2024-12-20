@@ -1,5 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+import time
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
@@ -23,6 +28,9 @@ class DataScraper:
         self.terminalValue = 0.0
         self.terminalPVValue = 0.0
         self.sumFCF = 0
+        self.cashAndEquivalents = 0
+        self.totalDebt = 0
+        self.equityValue = 0
 
     def fetchData(self):
         try:
@@ -34,16 +42,7 @@ class DataScraper:
         except Exception as e:
             print(f'ERROR: Chyba při načítání dat: {e}')
 
-        try:
-            page = requests.get(self.urlBalanceSheet, headers=self.header)
-            if page.status_code == 200:
-                self.parseDataBalanceSheet(page.text)
-                pass
-            else:
-                print('ERROR: Nepodařilo se načíst data')
-        except Exception as e:
-            print(f'ERROR: Chyba při načítání dat: {e}')
-
+        self.parseDataBalanceSheet()
 
     def parseDataCashflow(self, html):
         soup = BeautifulSoup(html, "html.parser") # Celá stránka
@@ -64,9 +63,59 @@ class DataScraper:
 
         print(self.sumFCF)
 
-    def parseDataBalanceSheet(self, html):
-        soup = BeautifulSoup(html, 'html.parser') # Celá HTML stránka
+    def parseDataBalanceSheet(self):
+        # **************************************************
+        # Cash and Cash Equivalents
+        # **************************************************
+        service = Service(executable_path='chromedriver.exe')
+        driver = webdriver.Chrome(service=service)
 
+        driver.get(self.urlBalanceSheet)
+
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.NAME,'reject'))).click() # Reject cookies button
+
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Total Assets']"))).click() # Expand button Total assets
+
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Current Assets']"))).click() # Expand button Current assets
+
+        html = driver.page_source # Získání HTM kódu stránky pro beautiful soup
+
+        soup = BeautifulSoup(html, 'html.parser') # Parsování
+
+        table = soup.find('div',class_='table yf-9ft13') # Tabulka
+
+        row = table.find('div',class_='row lv-2 yf-t22klz') # Řádek
+
+        self.cashAndEquivalents = row.find('div', class_='column yf-t22klz alt') # získání hodnoty
+        self.cashAndEquivalents = self.cashAndEquivalents.text.strip() 
+        self.cashAndEquivalents = round(float(self.cashAndEquivalents.replace(',','')))/1000
+
+        # **************************************************
+        # Total Debt
+        # **************************************************
+        rows = table.find_all('div', class_='rowTitle yf-t22klz') # Získání všech DIV elementů
+
+        # Nalezení konkrétního DIV (Total Debt DIV)
+        for row in rows:
+            if 'Total Debt' in row.text:
+                row1 = row
+
+        row = row1.parent # Získání DIV elementu o úroveň výše
+        row = row.parent # Získání DIV elementu o úroveň výše (Celý řádek tabulky)
+                
+        self.totalDebt = row.find('div', class_='column yf-t22klz alt')
+        self.totalDebt = self.totalDebt.text.strip()
+        self.totalDebt = float(self.totalDebt.replace(',',''))/1000
+
+        # **************************************************
+        # Equity value
+        # **************************************************
+        self.equityValue = self.sumFCF + self.cashAndEquivalents - self.totalDebt
+
+
+        print(self.totalDebt)
+
+        driver.quit()
 
     def parseFreeCashflowsValues(self, soup):
         table = soup.find('div', class_='tableBody yf-9ft13') # Tabulka
