@@ -15,6 +15,7 @@ class DataScraper:
         self.ticker = ticker
         self.urlCashflow = f"https://finance.yahoo.com/quote/{ticker}/cash-flow"
         self.urlBalanceSheet = f"https://finance.yahoo.com/quote/{ticker}/balance-sheet/"
+        self.urlKeyStatistics = f"https://finance.yahoo.com/quote/{ticker}/key-statistics/"
         self.header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:53.0) Gecko/20100101 Firefox/53.0'}
         
         self.dataFreeCashflows = []
@@ -31,8 +32,12 @@ class DataScraper:
         self.cashAndEquivalents = 0
         self.totalDebt = 0
         self.equityValue = 0
+        self.sharesOutstanding = 0
 
     def fetchData(self):
+        # *******************************************
+        # Scrap data from CashFlow statement
+        # *******************************************
         try:
             page = requests.get(self.urlCashflow, headers=self.header)
             if page.status_code == 200:
@@ -42,13 +47,28 @@ class DataScraper:
         except Exception as e:
             print(f'ERROR: Chyba při načítání dat: {e}')
 
+        # *******************************************
+        # Scrap data from CashFlow statement
+        # *******************************************
         self.parseDataBalanceSheet()
+
+        # *******************************************
+        # Scrap data from Key statistic
+        # *******************************************
+        try:
+            page = requests.get(self.urlKeyStatistics, headers=self.header)
+            if page.status_code == 200:
+                self._parseSharesOutstanding(page.text)
+            else:
+                print('ERROR: Nepodařilo se načíst data')
+        except Exception as e:
+            print(f'ERROR: Chyba při načítání dat: {e}')
 
     def parseDataCashflow(self, html):
         soup = BeautifulSoup(html, "html.parser") # Celá stránka
 
         # PARSE FREE CASHFLOW VALUES
-        self.parseFreeCashflowsValues(soup)
+        self._parseFreeCashflowsValues(soup)
 
         # GROWTH OF FREECASHFLOW VALUES + AVERAGE GROWTH RATE
         self.calculateGrowthRates()
@@ -80,6 +100,39 @@ class DataScraper:
 
         html = driver.page_source # Získání HTM kódu stránky pro beautiful soup
 
+        # Parse Cash and Cash Equivalents
+        table = self._parseCashAndEquivalents(html)
+
+        # Parse Total Debt
+        self._parseTotalDebt(table)
+
+        # **************************************************
+        # Equity value
+        # **************************************************
+        self.equityValue = self.sumFCF + self.cashAndEquivalents - self.totalDebt
+
+        print(self.totalDebt)
+
+        driver.quit()
+
+    def _parseSharesOutstanding(self, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        column = soup.find_all('div', class_='column yf-14j5zka')[-1]
+        rows = column.find_all('td', class_='label yf-vaowmx')
+
+        for current_row in rows:
+            if 'Shares Outstanding' in current_row.text:
+               row = current_row
+        
+        row_parent = row.parent
+
+        self.sharesOutstanding = row_parent.find('td', class_='value yf-vaowmx')
+        
+        print(self.sharesOutstanding)
+
+
+
+    def _parseCashAndEquivalents(self, html):
         soup = BeautifulSoup(html, 'html.parser') # Parsování
 
         table = soup.find('div',class_='table yf-9ft13') # Tabulka
@@ -90,9 +143,9 @@ class DataScraper:
         self.cashAndEquivalents = self.cashAndEquivalents.text.strip() 
         self.cashAndEquivalents = round(float(self.cashAndEquivalents.replace(',','')))/1000
 
-        # **************************************************
-        # Total Debt
-        # **************************************************
+        return table
+
+    def _parseTotalDebt(self, table):
         rows = table.find_all('div', class_='rowTitle yf-t22klz') # Získání všech DIV elementů
 
         # Nalezení konkrétního DIV (Total Debt DIV)
@@ -107,17 +160,7 @@ class DataScraper:
         self.totalDebt = self.totalDebt.text.strip()
         self.totalDebt = float(self.totalDebt.replace(',',''))/1000
 
-        # **************************************************
-        # Equity value
-        # **************************************************
-        self.equityValue = self.sumFCF + self.cashAndEquivalents - self.totalDebt
-
-
-        print(self.totalDebt)
-
-        driver.quit()
-
-    def parseFreeCashflowsValues(self, soup):
+    def _parseFreeCashflowsValues(self, soup):
         table = soup.find('div', class_='tableBody yf-9ft13') # Tabulka
         rows = table.find_all('div', class_='row lv-0 yf-t22klz') # Řádky tabulky
         last_row = rows[-1] # Selekce posledního řádku
@@ -137,9 +180,6 @@ class DataScraper:
         self.dataFreeCashflows.pop() # Odstranění posledního elementu z listu (element None)
         self.dataFreeCashflows = self.dataFreeCashflows[::-1] # Převrácení pořadí elementů v listu
         self.dataFreeCashflows.pop()
-
-    def parseCashAndEquivalents(self, soup):
-        table = soup.find
 
     def calculateGrowthRates(self):
         i = 0
@@ -182,7 +222,6 @@ class DataScraper:
         self.sumFCF = 0
         for val in self.PVFFCFValues:
             self.sumFCF += val
-
 
     def getData(self):
         # return self.data
