@@ -11,11 +11,11 @@ import numpy as np
 from itertools import zip_longest
 
 class DataScraper:
-    def __init__(self, ticker):
-        self.ticker = ticker
-        self.urlCashflow = f"https://finance.yahoo.com/quote/{ticker}/cash-flow"
-        self.urlBalanceSheet = f"https://finance.yahoo.com/quote/{ticker}/balance-sheet/"
-        self.urlKeyStatistics = f"https://finance.yahoo.com/quote/{ticker}/key-statistics/"
+    def __init__(self):
+        self.ticker = ""
+        self.urlCashflow = ""
+        self.urlBalanceSheet = ""
+        self.urlKeyStatistics = ""
         self.header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:53.0) Gecko/20100101 Firefox/53.0'}
         
         self.dataFreeCashflows = []
@@ -34,10 +34,19 @@ class DataScraper:
         self.equityValue = 0
         self.sharesOutstanding = 0
 
+    def set_Ticker(self, ticker):
+        self.ticker = ticker
+
+    def get_Ticker(self):
+        return self.ticker
+
     def fetchData(self):
         # *******************************************
         # Scrap data from CashFlow statement
         # *******************************************
+        self.urlCashflow = f"https://finance.yahoo.com/quote/{self.ticker}/cash-flow"
+        self.urlBalanceSheet = f"https://finance.yahoo.com/quote/{self.ticker}/balance-sheet/"
+        self.urlKeyStatistics = f"https://finance.yahoo.com/quote/{self.ticker}/key-statistics/"
         try:
             page = requests.get(self.urlCashflow, headers=self.header)
             if page.status_code == 200:
